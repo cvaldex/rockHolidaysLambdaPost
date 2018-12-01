@@ -85,11 +85,6 @@
         <version>2.12.4</version>
         <configuration>
           <systemPropertyVariables>
-            <!--properties.put("serverName", "rockholidays.cvecralyfpim.us-east-1.rds.amazonaws.com");
-		properties.put("serverPort", "5432");
-		properties.put("dbName", "rockholidays");
-		properties.put("dbUserName", "rockholidays");
-		properties.put("dbPassword", "rockholidays2018");-->
 			<dbServerName>${dbServerName}</dbServerName>
             <dbServerPort>${dbServerPort}</dbServerPort>
             <dbName>${dbName}</dbName>
