@@ -13,7 +13,7 @@ public class TestInsertTweetFromStream {
 	
    String message = "Hello World";	
    //MessageUtil messageUtil = new MessageUtil(message);
-   InsertTweetFromStream itfs = new InsertTweetFromStream(true);
+   InsertTweetFromStream itfs = new InsertTweetFromStream();
 
    @Test
    public void testInsertTweet() {

@@ -13,40 +13,29 @@ import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.amazonaws.services.lambda.runtime.Context; 
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 
-import cl.cvaldex.rockholiday.lambda.factory.DataSourceFactory;
 import cl.cvaldex.rockholiday.lambda.factory.LambdaLoggerFactory;
 import cl.cvaldex.rockholiday.lambda.jdbc.InsertTweetDAO;
 import cl.cvaldex.rockholiday.lambda.vo.TweetVO;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.postgresql.ds.common.BaseDataSource;
 import org.json.simple.parser.JSONParser;
 
 import org.apache.commons.codec.binary.Base64;
 
 public class InsertTweetFromStream implements RequestStreamHandler {
-	
-	/*
-	 * Este campo permite determinar si la clase debe sacar los datos desde el factory local
-	 * o desde el entorno de ejecución
-	 * 
-	 * Por defecto, los saca del entorno para respetar el stateless del Lambda
-	 */
-	private boolean isLocal = false;
 
-	public InsertTweetFromStream(boolean isLocal){
-		this.isLocal = isLocal;
-	}
-	
 	public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
 		BaseDataSource dataSource = null;
 		InsertTweetDAO dao = null;
 		long id = -1000;
 		
 		LambdaLogger logger = LambdaLoggerFactory.getLogger(context);
+		
 		logger.log("Getting DataSource");
-		dataSource = (BaseDataSource)DataSourceFactory.getDataSource(isLocal);
+		dataSource = getDatasource();
 		
 		logger.log("Loading Java Lambda handler of InsertTweetFromStream");
 		
@@ -104,9 +93,9 @@ public class InsertTweetFromStream implements RequestStreamHandler {
 			JSONObject headerJson = new JSONObject();
 			//headerJson.put("x-custom-header", "my custom header value");
 
-			responseJson.put("isBase64Encoded", false);
+			//responseJson.put("isBase64Encoded", false);
 			responseJson.put("statusCode", responseCode);
-			responseJson.put("headers", headerJson);
+			//responseJson.put("headers", headerJson);
 			responseJson.put("id", id);  
 
 		} catch(ParseException pex) {
@@ -126,5 +115,27 @@ public class InsertTweetFromStream implements RequestStreamHandler {
 		InputStream byteFile = new ByteArrayInputStream(Base64.decodeBase64(encodedFile.getBytes()));
 
 		return byteFile;
+	}
+	
+	private BaseDataSource getDatasource(){
+		BaseDataSource dataSource = new PGSimpleDataSource();
+		
+		dataSource.setServerName(getProperty("dbServerName"));
+		dataSource.setPortNumber(new Integer(getProperty("dbServerPort")));
+		dataSource.setDatabaseName(getProperty("dbName"));
+		dataSource.setUser(getProperty("dbUserName"));
+		dataSource.setPassword(getProperty("dbPassword"));
+		
+		return dataSource;
+	}
+	
+	private String getProperty(String property){
+		String value = System.getenv(property);
+		
+		if(value == null){
+			value = System.getProperty(property);
+		}
+		
+		return value;
 	}
 }

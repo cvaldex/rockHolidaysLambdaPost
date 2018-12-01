@@ -29,3 +29,7 @@ target/
 .settings/
 .classpath
 .project
+
+# archivo de propiedades de testing
+test.properties
+
