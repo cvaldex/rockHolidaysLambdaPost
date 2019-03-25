@@ -18,7 +18,6 @@ import cl.cvaldex.rockholiday.lambda.jdbc.InsertTweetDAO;
 import cl.cvaldex.rockholiday.lambda.vo.TweetVO;
 
 import org.json.simple.JSONObject;
-import org.json.simple.parser.ParseException;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.postgresql.ds.common.BaseDataSource;
 import org.json.simple.parser.JSONParser;
@@ -47,61 +46,32 @@ public class InsertTweetFromStream implements RequestStreamHandler {
 		String responseCode = "200";
 
 		try {
-			JSONObject event = (JSONObject)parser.parse(reader);
+			JSONObject parsedJSON = (JSONObject)parser.parse(reader);
 
-			if (event.get("body") != null) {
-				JSONObject body = (JSONObject)event.get("body");
-
-				TweetVO vo = new TweetVO();
-
-				if ( body.get("text") != null) {
-					vo.setText((String)body.get("text"));
-				}
-
-				if ( body.get("date") != null) {
-					vo.setDate((String)body.get("date"));
-				}
-
-				if ( body.get("author") != null) {
-					vo.setAuthor((String)body.get("author"));
-				}
-				
-				if ( body.get("image1") != null) {
-					vo.setImage1(decodeBase64((String)body.get("image1")));
-				}
-				
-				if ( body.get("image2") != null) {
-					vo.setImage2(decodeBase64((String)body.get("image2")));
-				}
-				
-				if ( body.get("image3") != null) {
-					vo.setImage3(decodeBase64((String)body.get("image3")));
-				}
-				
-				if ( body.get("image4") != null) {
-					vo.setImage4(decodeBase64((String)body.get("image4")));
-				}
-				
-				logger.log(vo.toString());
-				
-				//Insertar en la Base de Datos
-				dao = new InsertTweetDAO((DataSource) dataSource);
-				
-				id = dao.insertTweets(vo);
-			}
-
-			JSONObject headerJson = new JSONObject();
-			//headerJson.put("x-custom-header", "my custom header value");
-
-			//responseJson.put("isBase64Encoded", false);
-			responseJson.put("statusCode", responseCode);
-			//responseJson.put("headers", headerJson);
+			TweetVO vo = new TweetVO();
+			
+			vo.setText(evaluateAndAsign("text" , parsedJSON.get("text") , false));
+			vo.setDate(evaluateAndAsign("date" , parsedJSON.get("date") , false));
+			vo.setAuthor(evaluateAndAsign("author" , parsedJSON.get("author") , false));
+			vo.setImage1(decodeBase64(evaluateAndAsign("image1" , parsedJSON.get("image1"), true)));
+			vo.setImage2(decodeBase64(evaluateAndAsign("image2" , parsedJSON.get("image2"), true)));
+			vo.setImage3(decodeBase64(evaluateAndAsign("image3" , parsedJSON.get("image3"), true)));
+			vo.setImage4(decodeBase64(evaluateAndAsign("image4" , parsedJSON.get("image4"), true)));
+			
+			logger.log(vo.toString());
+			
+			//Insertar en la Base de Datos
+			dao = new InsertTweetDAO((DataSource) dataSource);
+			
+			id = dao.insertTweets(vo);
+			
 			responseJson.put("id", id);  
-
-		} catch(ParseException pex) {
-			responseJson.put("statusCode", "400");
+		} catch(Exception pex) {
+			responseCode = "400";
 			responseJson.put("exception", pex);
 		}
+		
+		responseJson.put("statusCode", responseCode);
 
 		logger.log(responseJson.toJSONString());
 		
@@ -110,9 +80,26 @@ public class InsertTweetFromStream implements RequestStreamHandler {
 		writer.write(responseJson.toJSONString());  
 		writer.close();
 	}
+	
+	public String evaluateAndAsign(String fieldName , Object value , boolean useEmptyString) throws Exception{
+		if(value == null && !useEmptyString){
+			throw new Exception (fieldName + ": cannot be null");
+		}
+		
+		String stringValue = (value == null) ? "" : (String)value;
+		
+		return stringValue;
+	}
+	
 
 	private InputStream decodeBase64(String encodedFile){
-		InputStream byteFile = new ByteArrayInputStream(Base64.decodeBase64(encodedFile.getBytes()));
+		InputStream byteFile = null;
+		
+		if(encodedFile != null){
+			if(encodedFile.trim().length() > 0){
+				byteFile = new ByteArrayInputStream(Base64.decodeBase64(encodedFile.getBytes()));
+			}
+		}
 
 		return byteFile;
 	}

@@ -56,7 +56,6 @@
     </dependency>
   </dependencies>
   <properties>
-    <project.build.dbServerPort>5432</project.build.dbServerPort>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 </project>
